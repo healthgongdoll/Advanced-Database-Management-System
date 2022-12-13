@@ -433,70 +433,26 @@ Advantages of B+ trees:
   - Insertion and deletion is easier 
   - Implementation is easier 
   
-## Range Search 
+## B+ Tree 
 
-"Find all student with gpa > 3.0"
-
-- If data is in sorted file, do binary search to find first such student then scan to find others. 
-
-## B+ Tree: Most widely used index 
-
-- Insert/Delete at logfN cost; keep tree height-balanced. (F= Fanout, N is # of leaf pages) 
-- Minimum 50% occupancy (except for root). Each node contains d<= m <= 2d entries. The parameter d is called the order of the tree. 
-- Supports equality and range searches efficiently.
-
-## B+ Tree in Practice
-
-- Typical order 100, Typicall fill-factor: 67% 
-  - Average Fanout 133 
-- Typical capacities: 
-  - Height 4: 133^4 = 312,900,700 records 
-  - Height 3: 133^3 = 2,352,637 records 
-- Can often hold top levels in buffer pool:
-  - Level 1 = 1 page = 8K byte 
-  - Level 2 = 133 page = 1M byte...
- 
-## B+ Tree Insertion 
-
-- Find correct Leaf L. 
-- Put data entry onto L.
-  - If L has enough space, done! 
-  - Else, must split L (into L and new node L2) 
-    - Redistribute entries evenly, copy up middle key
-    - Insert index entry pointing to L2 into parent of L 
-- This can happen recursively
-  - To split index node, redistribute entries evenly, but push up middle key.
-- Split "grow" tree; root split increases height 
-
-## B+ Tree Deletion
-
-- Start at root, find leaf L where entry belongs. 
-- Remove the entry
-  - If L is at least half-full done!
-  - If L has only d-1 entries,
-     - Try to redistribute, borrowing from sibiling (adjacent node with same parent as L)
-     - If re-distribution fails, merge L and sibling.
-  - If merge occurred, must delete entry (pointing to L or sibiling) from parent of L 
-  - Merge could propagate to root, decreasing height 
- 
- 
- ## More information about B Tree 
- 
- - used by database systems 
-  - large volume of data 
- - reduced disk operations 
-  - disk I/O proportional to tree height 
- - run time of O(logN) for many operations 
- - root is kept in main memory 
- - Leaf node loaded into memory
-
-## B Tree characteristics 
-
-- They have n keys -> increasing order 
-- They will have n+1 children 
-- Lower and Upper bound on the number of keys 
-  - minium degree of tree 
+Similar to ISAM 
+- Same interior node structure 
+  - <Key, Page Ptr> paris with same key invariant 
+  - Same search routine as before 
   
- 
+## B+ Tree Example
 
+<img width="747" alt="image" src="https://user-images.githubusercontent.com/79100627/207450440-a8dfa310-864e-4912-9d6e-8bd405ce8d3a.png">
+
+- Occupancy Invariant 
+  - Each Interior node is at least paritially full: 
+    - d <= # entries <= 2d 
+    - d: order of the tree (max fan-out = 2d+1) 
+  - Data page at bottom need not be stored in logical order 
+  
+- What is the value of d? in the above?
+  - Since we have 5 pointers per page => 5 = 2d + 1 Therefore, d should be 2. (Order of tree is 2) 
+  - What about the root?
+    - root is a speical case 
+   
 
