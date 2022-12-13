@@ -263,4 +263,240 @@ Information about field types same for all records in a file. This is stored in 
 
 Finding ith field requires a scan of the record 
 
+## Record Formats: variable length 
+
+We do not know how long the field will be
+
+Two Alternatives:
+
+![image](https://user-images.githubusercontent.com/79100627/207404158-1af0f0d1-c1d9-4348-9552-fea247cb037e.png)
+
+For the sigil will not distinguish between empty string and nulls. It would need a flag for each Null fields 
+For the Offset, direct access to the ith field and efficient storage for nulls. 
+
+## Page Formats: Fixed Length records 
+
+There are also two methods Packed, Unpacked (Bitmap) 
+
+![image](https://user-images.githubusercontent.com/79100627/207406112-71fb927b-1132-4641-b6ba-e60403d836f7.png)
+
+Packed: we have an array of fixed cell size, keeping slots and Meta data (N is the number of records). 
+Unpacked: Instead of using packed we use bitmap to reduce change of RID problem. Not changing RID around 
+
+### Packed vs Unpacked
+
+For packed page formats, since we are adding, updating slots a lot, there is a cost of moving a records. If I pack things, if RID has changed, every index uses those RID needs to be changed as well. (Let's assume that if we remove one of the record (slot) then we have to move i to N to the front for each of the slots. This could be very costly). 
+
+Therefore, Unpack is better! With packed, moving a record managing the free space changes RID 
+
+## Page Formats: Variable Length Records 
+
+![image](https://user-images.githubusercontent.com/79100627/207410787-39de0aa5-6c40-46b8-b5ef-32f3675913ad.png)
+
+Slot Directory tells you:
+1. Offset where it starts 
+2. How long in byte 
+
+N is the # of slots that presently in used. 
+
+- I could maximize the free space 
+- We still need to pack this
+- Indirection 
+- Can move records without changing rid's 
+- This format is attractive for fixed-length records too.
+
+## Unordered (Heap) files 
+
+- Simplest file structure contains records in no particular order.
+- As file grows and shrinks, disk pages are allocated and de-allocated
+- To support record level operations, we must 
+  - Keep track of the pages in a file 
+  - Keep track of free space on pages, and 
+  - Keep track of the records on a page
+- There are many alternatives of keeping track of this. 
+
+## Heap file: list implementation 
+
+![image](https://user-images.githubusercontent.com/79100627/207411965-b8faf794-9e70-4ff5-a33e-47212a2fab76.png)
+
+- It is a doubly linked list 
+- Header Page is the metadata from system catalog
+
+## Heap file: page-directory implementation 
+
+![image](https://user-images.githubusercontent.com/79100627/207412192-ac294ad6-b88b-41da-a051-62e40a8cd34c.png)
+
+- Directory is relatively small, it collects Record name, free space 
+- The entry for a page can include the number of free bytes on page 
+- The directory is a collection of pages; linked list implementation is just one alternative. (Much smaller than linkedlist of all HF pages) 
+
+## System Catalogs
+
+- For each index:
+  - Structure (e.g., B+ tree) and search key fields 
+- For each relation:
+  - name, file name, file structure (Heap file) 
+  - Attribute name and type, for each attribute 
+  - Index name, for each index
+  - integirity constraints 
+ - For each view 
+  - view name and definition
+  - Statistics, authorization, bufferpool size, etc. 
+
+## The Managers (Layers)
+
+1. The Data Space Manager
+2. The Buffer Pool Manager
+3. The File Manager
+
+## DBMS vs OS File Support 
+
+- DBMS needs features not found in many OS's; e.g., 
+  - Forcing a page to disk,
+  - Controlling the order of page writes to disk 
+  - Files spanning disks 
+  - Ability to control pre-fetching
+  - Page replacement policy based on predictable access time 
+
+## Data Space Manager
+
+Lowest Layer of DBMS software manages space on disk.
+
+Higher level call upon this layer to 
+  - allocate & de-allocate a page 
+  - allocaate & de-allocate a sqeunce of pages
+  - read & write page 
+
+Reqeust for a sequence of spages should be satisfied - to the degree possible! - by allocating the pages sequentially on disk.
+
+Higher levels don't need to know how this is done. or how free space is managed. 
+
+## Buffer Pool Manager 
+
+The Buffer-Pool Manager brings pages into RAM.
+  - Page stays in RAM until released by requestor 
+  - Written to disk when frame chosen for replacement 
+  - Choice of frame to replace based on replacement policy 
+  - Tries to prefetch several pages at a time 
+  
+ ![image](https://user-images.githubusercontent.com/79100627/207414382-c864912c-4a68-4b6c-a539-30c50a8eba3b.png)
+ 
+ When Page is Requested...
+ 1. If requested page is not in the pool
+  - Choose a frame for replacement 
+  - If page is dirty, write it to disk (Dirty -> Changes made to it but It has not written to the disk yet. (File in BP and Disk is different))
+ 2. Pin the page and return its address 
+  - If someone has requested and page is in use (Pin-page is not eligible for replacement) 
+  - Pin_count = 0, No reqeusting Release it 
+  - Pin_count = 7, 7 Operation is open 
+  
+  What if All frames are pinned?
+  - Transaction can wait or fail!! 
+  
+## BP Responsibilities 
+    - Requestor of page must unpin and indicate whether page has been modified
+      - The dirty bit is used for this
+    - Page in pool may be requested many times 
+      - so a pin_count (semaphor) is used.
+      - A page is a candidate for replacement iff its pin_count = 0
+
+## Buffer Replacement Policy 
+- Frame is chosen by replacement policy:
+  - Least-recently-used (LRU), Clock, MRU, etc.
+  - Policy can have big impact on #I/O's depending on the access pattern
+  - Clock Pointer - Issue there, Clock pointer that just unpinned we could miss it. Therefore, we have one more pointer 
+  - Why clock was popular? -> Beacuse it is faster. 
+  
+Sequential Flooding: A nasty situation caused by LRU and repeasted Sequential scans 
+
+- If Number of Buffer frames < Number of pages in file means that Each page request causes an I/O
+- For example, Let's assume we have 4 Buffer frames and There are 5 pages: ABCDE
+- ABCD -> Buffer is Full, Now, E comes but A is least recently used so A gets removed. However, A will be request again, B should be removed and so on...
+- MRU is much better in this situation (but not in all situations) 
+
+
+## Tree-based Indexes 
+
+Tree may be too big for main memory
+  - Need to be careful about #I/O's for searches, inserts, and deletes 
+  - Must group information by page. 
+
+## B Trees versus B+ Trees 
+
+Advantages of B trees: 
+  - May use fewer tree nodes than a corresponding B+ tree.
+  - Sometimes possible to find the search-key value before reaching a leaf node 
+ 
+Advantages of B+ trees:
+  - Only a small fraction of searches are found before a leaf page.
+  - Non leaf pages can contain more index keys than the B tree's non-leaf page can contain records (or entries) so fan-out F is more 
+  - Insertion and deletion is easier 
+  - Implementation is easier 
+  
+## Range Search 
+
+"Find all student with gpa > 3.0"
+
+- If data is in sorted file, do binary search to find first such student then scan to find others. 
+
+## B+ Tree: Most widely used index 
+
+- Insert/Delete at logfN cost; keep tree height-balanced. (F= Fanout, N is # of leaf pages) 
+- Minimum 50% occupancy (except for root). Each node contains d<= m <= 2d entries. The parameter d is called the order of the tree. 
+- Supports equality and range searches efficiently.
+
+## B+ Tree in Practice
+
+- Typical order 100, Typicall fill-factor: 67% 
+  - Average Fanout 133 
+- Typical capacities: 
+  - Height 4: 133^4 = 312,900,700 records 
+  - Height 3: 133^3 = 2,352,637 records 
+- Can often hold top levels in buffer pool:
+  - Level 1 = 1 page = 8K byte 
+  - Level 2 = 133 page = 1M byte...
+ 
+## B+ Tree Insertion 
+
+- Find correct Leaf L. 
+- Put data entry onto L.
+  - If L has enough space, done! 
+  - Else, must split L (into L and new node L2) 
+    - Redistribute entries evenly, copy up middle key
+    - Insert index entry pointing to L2 into parent of L 
+- This can happen recursively
+  - To split index node, redistribute entries evenly, but push up middle key.
+- Split "grow" tree; root split increases height 
+
+## B+ Tree Deletion
+
+- Start at root, find leaf L where entry belongs. 
+- Remove the entry
+  - If L is at least half-full done!
+  - If L has only d-1 entries,
+     - Try to redistribute, borrowing from sibiling (adjacent node with same parent as L)
+     - If re-distribution fails, merge L and sibling.
+  - If merge occurred, must delete entry (pointing to L or sibiling) from parent of L 
+  - Merge could propagate to root, decreasing height 
+ 
+ 
+ ## More information about B Tree 
+ 
+ - used by database systems 
+  - large volume of data 
+ - reduced disk operations 
+  - disk I/O proportional to tree height 
+ - run time of O(logN) for many operations 
+ - root is kept in main memory 
+ - Leaf node loaded into memory
+
+## B Tree characteristics 
+
+- They have n keys -> increasing order 
+- They will have n+1 children 
+- Lower and Upper bound on the number of keys 
+  - minium degree of tree 
+  
+ 
+
 
