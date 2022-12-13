@@ -202,5 +202,65 @@ For a sequential scan, prefteching several pages at a time is a big win.
 
 ### SSD vs HDD 
 
-Random Access Time : SSD Wins
-Data transfer rates: SSD is 100 MB 
+1. Random Access Time : SSD Wins
+2. Data transfer rates: SSD is 100 - 600 mb, HDD is 100 to 200mb, once the head is psotitioned
+3. Reliability: SSD is vulnerable to power outages (Critically fail), Risk of sudden, catastropic data loss is higher, "wear out" under long-term, heavy write load, but higher end SSD now have better reliability than HDD. HDD: average failture rate is 6 years, life expectancy is 9-11 years. 
+
+## RAID 
+
+Redundant Array of Independent Disks 
+- Disk array: arrangement of multiple disks that provides the abstraction of a single, large disk. 
+- Can increase performance and reliability 
+- Provides
+  - Data striping: Data is partitioned in stripes 
+  - Redundancy: can survive a disk (or two) failing 
+
+## RAID Levels 
+
+### Level 0 
+![image](https://user-images.githubusercontent.com/79100627/207229173-ee68f91b-8c79-4939-a8b8-910d9a12bacb.png)
+
+- If one disk dies, system is broken. 
+- Speeding wise, it could be fast (We use two disks) 
+
+### Level 1 
+![image](https://user-images.githubusercontent.com/79100627/207229367-2ac85c2d-93f1-45f5-a18b-ee44dfd20e30.png)
+
+- Eventhough one disk fails it can survives 
+
+### Level 5 
+
+![image](https://user-images.githubusercontent.com/79100627/207229519-572ab757-5838-474e-8a01-d5f1e31db3c2.png)
+
+- Parity is used rebuild the data due to disk failure (Precious information) 
+- The equivalent of an entire disk is used to store parity 
+- If 4 terabytes, we can only store 3 terabytes 
+- Only can handle one disk failure, if two broken, still break the whole system 
+
+### Level 1+0
+![image](https://user-images.githubusercontent.com/79100627/207229724-4c0815ff-ca29-4580-a1b6-bac06f077da5.png)
+
+- Benefits from the fault tolerance of RAID 1 and the speed of RAID 0 
+- Can only use 50% of for data storage 
+
+### Level 6 
+
+![image](https://user-images.githubusercontent.com/79100627/207230012-b739122b-b50b-4e43-bfa8-e2495f6f52fe.png)
+
+- Can handle two disk failure 
+- Store two parities equivalently
+- Only 50% can be used. Write is much slower than level 5 
+
+## File, Page & Record Formats 
+
+- Rid = <Pag-ID, slot#>
+
+## Record Formats: Fixed Length 
+
+![image](https://user-images.githubusercontent.com/79100627/207230405-4adc493a-d59b-4f5c-80ff-0a644f35de37.png)
+
+Information about field types same for all records in a file. This is stored in the system catalog 
+
+Finding ith field requires a scan of the record 
+
+
